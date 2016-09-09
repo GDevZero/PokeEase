@@ -8,6 +8,7 @@
     private previousCaptureAttempts: IPokemonCaptureEvent[];
     private itemsUsedForCapture: number[];
     private currentPokemonCount: number;
+    private currentSnipePokemonCount : number;
     private currentItemCount: number;
     private latestPlayerStats: IPlayerStatsEvent;
 
@@ -22,6 +23,10 @@
         this.currentPokemonCount = 0;
         this.currentItemCount = 0;
         this.latestPlayerStats = null;
+    }
+
+    public onLog(logEvent: ILogEvent): void {
+        this.config.consoleController.log(logEvent);
     }
 
     public onPlayerLevelUp = (levelUp: IPlayerLevelUpEvent): void => {
@@ -94,8 +99,10 @@
     public onProfile(profile: IProfileEvent): void {
         this.config.mainMenuController.updateProfileData(profile);
         this.config.profileInfoController.setProfileData(profile);
+        this.config.requestSender.sendGetConfigRequest();
         this.config.requestSender.sendPlayerStatsRequest();
         this.config.requestSender.sendGetPokemonSettingsRequest();
+        this.config.requestSender.sendPokemonSnipeListUpdateRequest();
         this.config.requestSender.sendInventoryListRequest();
         this.config.requestSender.sendPokemonListRequest();
         this.config.requestSender.sendEggsListRequest();
@@ -187,6 +194,10 @@
         this.config.mainMenuController.setPokemonCount(this.currentPokemonCount);
     }
 
+    public onGetConfig(configEvent: IConfigEvent): void {
+        this.config.botConfigMenuController.setBotConfig(configEvent);
+    }
+
     public onPokemonList(pokemonList: IPokemonListEvent): void {
         this.config.pokemonMenuController.updatePokemonList(pokemonList);
         this.currentPokemonCount = pokemonList.Pokemons.length;
@@ -217,6 +228,10 @@
         this.latestPlayerStats = playerStats;
     }
 
+    public onSendGetConfigRequest(request: IRequest): void {
+
+    }
+
     public onSendPokemonListRequest(request: IRequest): void {
         this.config.pokemonMenuController.pokemonListRequested(request);
     }
@@ -225,10 +240,26 @@
         this.config.eggMenuController.eggListRequested(request);
     }
 
+    public onHumanSnipeList(pokemonList: IHumanWalkSnipeListEvent): void {
+        this.config.snipesMenuController.updateSnipePokemonList(pokemonList);
+        const currentSnipePokemonCount = pokemonList.Pokemons.length;
+        this.config.mainMenuController.setSnipePokemonCount(currentSnipePokemonCount);
+        this.config.mainMenuController.showSnipesMenu();
+    }
+
     public onSendInventoryListRequest(request: IRequest): void {
         this.config.inventoryMenuController.inventoryListRequested(request);
     }
-
+     public onSendHumanSnipePokemonRequest(request: IRequest): void {
+        //this.config.inventoryMenuController.inventoryListRequested(request);
+    }
+    public onSendHumanSnipPokemonListUpdateRequest(request:IRequest) : void {
+    
+    }
+    public onSendHumanSnipePokemonRemoveRequest(request:IRequest) : void {
+        let currentSnipePokemonCount = this.currentSnipePokemonCount -1;
+        this.config.mainMenuController.setSnipePokemonCount(currentSnipePokemonCount);
+    }
     public onSendPlayerStatsRequest(request: IRequest): void {
         
     }
@@ -248,4 +279,5 @@
     public onSettingsChanged = (settings: ISettings, previousSettings: ISettings):void => {
         this.config.map.config.followPlayer = settings.mapFolllowPlayer;
     }
+
 }

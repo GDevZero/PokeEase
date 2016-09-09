@@ -1,10 +1,4 @@
-﻿/// <reference path="../../externaltypings/es6-promise/es6-promise.d.ts" />
-/// <reference path="../../externalTypings/jquery/jquery.d.ts" />
-/// <reference path="../../externalTypings/lodash/lodash.d.ts" />
-/// <reference path="../../externalTypings/leaflet/leaflet.d.ts" />
-/// <reference path="../../externalTypings/moment/moment.d.ts" />
-/// <reference path="../../externalTypings/googlemaps/google.maps.d.ts" />
-
+﻿/// <reference path="../../../typings/index.d.ts"/>
 
 $(() => {
     StaticData.init(rawData);
@@ -71,6 +65,12 @@ $(() => {
         eggMenuElement: $('body .content[data-category="eggs"]'),
         eggLoadingSpinner: $(".spinner-overlay")
     });
+    const snipesMenuController = new HumanSnipeMenuController({
+        translationController: translationController,
+        requestSender: client,
+        snipeMenuElement: $('body .content[data-category="snipes"]') 
+        //eggLoadingSpinner: $(".spinner-overlay")
+    });
 
     const settingsMenuController = new SettingsMenuController({
         settingsMenuElement: $('body.live-version .content[data-category="settings"]'),
@@ -78,6 +78,10 @@ $(() => {
         settingsService: settingsService
     });
     settingsMenuController.setSettings(settings);
+
+    const botConfigMenuController = new BotConfigMenuController({
+        botSettingsMenuElement: $('body .content[data-category="bot-config"]'),
+    });
 
     const profileInfoController = new ProfileInfoController({
         hideUsername: false,
@@ -94,6 +98,10 @@ $(() => {
     const useGoogleMap = settings.mapProvider === MapProvider.GMaps;
     const lMap = useGoogleMap ? new GoogleMap(mapConfig) : new LeafletMap(mapConfig);
 
+    const consoleController = new ConsoleController({
+        consoleElement: $("#console")
+    });
+
     const interfaceHandler = new InterfaceHandler({
         translationController: translationController,
         notificationControllers: [
@@ -105,11 +113,14 @@ $(() => {
         pokemonMenuController: pokemonMenuController,
         inventoryMenuController: inventoryMenuController,
         eggMenuController: eggMenuController,
+        snipesMenuController: snipesMenuController,
+        botConfigMenuController: botConfigMenuController,
         profileInfoController: profileInfoController,
         requestSender: client,
         map: lMap,
         settingsService: settingsService,
-        fortCacheService: fortCacheService
+        fortCacheService: fortCacheService,
+        consoleController: consoleController
     });
 
     client.start({

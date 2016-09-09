@@ -1,4 +1,5 @@
 interface IRequestSender {
+    sendGetConfigRequest();
     sendPokemonListRequest();
     sendEggsListRequest();
     sendInventoryListRequest();
@@ -6,5 +7,8 @@ interface IRequestSender {
     sendGetPokemonSettingsRequest();
     sendTransferPokemonRequest(pokemonId: string);
     sendEvolvePokemonRequest(pokemonId: string);
+    sendHumanSnipePokemonRemoveRequest(pokemonId: string);
+    sendHumanSnipePokemonSnipeRequest(pokemonId: string);
+    sendPokemonSnipeListUpdateRequest();
     currentBotFamily: BotFamily;
 }

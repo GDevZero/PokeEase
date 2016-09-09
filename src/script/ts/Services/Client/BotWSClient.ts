@@ -99,6 +99,11 @@
             _.each(this.config.eventHandlers, eh => eh.onProfile(profile));
         }
 
+        else if (_.includes(type, ".LogEvent,")) {
+            const logEvent = message as ILogEvent;
+            _.each(this.config.eventHandlers, eh => eh.onLog(logEvent));
+        }
+
         else if (_.includes(type, ".PlayerLevelUpEvent,")) {
             const levelUpEvent = message as IPlayerLevelUpEvent;
             _.each(this.config.eventHandlers, eh => eh.onPlayerLevelUp(levelUpEvent));
@@ -195,77 +200,82 @@
         }
 
         //#region Request response events
+
+        else if (_.includes(type, ".ConfigResponce,")) {
+            const configEvent = message.Data as IConfigEvent;
+            configEvent.Timestamp = timestamp;
+            _.each(this.config.eventHandlers, eh => eh.onGetConfig(configEvent));
+        }
+
         else if (_.includes(type, ".PokemonListEvent,")) {
             const originalList = message.PokemonList.$values;
             const pokemonList: IPokemonListEvent = {
                 Pokemons: [],
                 Timestamp: timestamp
             };
-            _.each(originalList, val => {
+            _.each(originalList,
+                val => {
                     const pokemon = val.Item1 as IPokemonListEntry;
                     pokemon.Perfection = val.Item2;
                     pokemon.FamilyCandies = val.Item3;
                     pokemonList.Pokemons.push(pokemon);
-            });
+                });
             _.each(this.config.eventHandlers, eh => eh.onPokemonList(pokemonList));
-        }
-
-        else if (_.includes(type, ".PokemonListResponce,")) {
+        } else if (_.includes(type, ".PokemonListResponce,")) {
             const originalList = message.Data.$values;
             const pokemonList: IPokemonListEvent = {
                 Pokemons: [],
                 Timestamp: timestamp
             };
 
-            _.each(originalList, val => {
-                const pokemon = val.Base as IPokemonListEntry;
-                pokemon.Perfection = val.IvPerfection;
-                pokemonList.Pokemons.push(pokemon);
-            });
+            _.each(originalList,
+                val => {
+                    const pokemon = val.Base as IPokemonListEntry;
+                    pokemon.Perfection = val.IvPerfection;
+                    pokemonList.Pokemons.push(pokemon);
+                });
 
             _.each(this.config.eventHandlers, eh => eh.onPokemonList(pokemonList));
-        }
-
-        else if (_.includes(type, ".EggsListEvent,")) {
+        } else if (_.includes(type, ".EggsListEvent,")) {
             const eggList = message;
             eggList.Incubators = message.Incubators.$values;
             eggList.UnusedEggs = message.UnusedEggs.$values;
             eggList.Timestamp = timestamp;
             _.each(this.config.eventHandlers, eh => eh.onEggList(eggList));
-        }
-
-        else if (_.includes(type, ".EggListResponce,")) {
+        } else if (_.includes(type, ".EggListResponce,")) {
             const eggList = message.Data;
             eggList.Incubators = message.Data.Incubators.$values;
             eggList.UnusedEggs = message.Data.UnusedEggs.$values;
             eggList.Timestamp = timestamp;
             _.each(this.config.eventHandlers, eh => eh.onEggList(eggList));
-        }
-
-        else if (_.includes(type, ".InventoryListEvent,")) {
+        } else if (_.includes(type, ".InventoryListEvent,")) {
             const inventoryList: IInventoryListEvent = {
                 Items: message.Items.$values,
                 Timestamp: timestamp
             };
             _.each(this.config.eventHandlers, eh => eh.onInventoryList(inventoryList));
-        }
-
-        else if (_.includes(type, ".ItemListResponce,")) {
+        } else if (_.includes(type, ".ItemListResponce,")) {
             const inventoryList: IInventoryListEvent = {
                 Items: message.Data.$values,
                 Timestamp: timestamp
             };
             _.each(this.config.eventHandlers, eh => eh.onInventoryList(inventoryList));
-        }
-
-        else if (_.includes(type, ".PlayerStatsEvent,") || _.includes(type, ".TrainerProfileResponce,")) {
+        } else if (_.includes(type, ".HumanWalkSnipeEvent")) {
+            let snipeEv = message as IHumanWalkSnipeEvent;
+            if (snipeEv.Pokemons) {
+                const snipesList: IHumanWalkSnipeListEvent = {
+                    Pokemons: snipeEv.Pokemons.$values
+                }
+                _.each(this.config.eventHandlers, eh => eh.onHumanSnipeList(snipesList));
+            }
+        } else if (_.includes(type, ".PlayerStatsEvent,") || _.includes(type, ".TrainerProfileResponce,")) {
             let originalStats: any;
             if (_.includes(type, ".PlayerStatsEvent,")) {
                 originalStats = message.PlayerStats.$values[0];
             } else {
                 originalStats = message.Data.Stats;
             }
-            
+
             const playerStats = originalStats as IPlayerStatsEvent;
             playerStats.Experience = parseInt(originalStats.Experience);
             playerStats.NextLevelXp = parseInt(originalStats.NextLevelXp);
@@ -274,21 +284,26 @@
             playerStats.Timestamp = timestamp;
             _.each(this.config.eventHandlers, eh => eh.onPlayerStats(playerStats));
         }
-        
         //#endregion
 
         else {
-            _.each(this.config.eventHandlers, eh => {
-                if (eh.onUnknownEvent) {
-                    eh.onUnknownEvent(message);
-                }
-            });
+            _.each(this.config.eventHandlers,
+                eh => {
+                    if (eh.onUnknownEvent) {
+                        eh.onUnknownEvent(message);
+                    }
+                });
         }
-        
+
     }
 
-
-
+    public sendGetConfigRequest = (): void => {
+        const necroRequest: IRequest = { Command: "GetConfig" };
+        _.each(this.config.eventHandlers, eh => eh.onSendGetConfigRequest(necroRequest));
+        if (this.currentBotFamily === BotFamily.Undetermined || this.currentBotFamily === BotFamily.Necro) {
+            this.sendRequest(necroRequest);
+        }
+    };
 
     public sendPokemonListRequest = (): void => {
         const pmbRequest: IRequest = { Command: "PokemonList" };
@@ -370,6 +385,37 @@
         console.log("%c>>> OUTGOING:", "color: red", request);
         const requestStr = JSON.stringify(request);
         this.webSocket.send(requestStr);
+    }
+
+    public sendPokemonSnipeListUpdateRequest = ():void => {
+        const necroRequest: IRequest = { Command: "PokemonSnipeList" };
+        _.each(this.config.eventHandlers, eh => eh.onSendHumanSnipPokemonListUpdateRequest(necroRequest));
+       
+        if (this.currentBotFamily === BotFamily.Undetermined || this.currentBotFamily === BotFamily.Necro) {
+            this.sendRequest(necroRequest);
+        }
+    }
+	
+    public sendHumanSnipePokemonRemoveRequest = (pokemonId: string): void => {
+        const request: IRequest = {
+             Command: "RemovePokemon",
+             Data: pokemonId,
+             PokemonId: pokemonId,
+             Id:pokemonId
+        };
+        _.each(this.config.eventHandlers, eh => eh.onSendHumanSnipePokemonRemoveRequest(request));
+        this.sendRequest(request);
+    }
+	
+    public sendHumanSnipePokemonSnipeRequest = (pokemonId: string): void => {
+        const request: IRequest = {
+             Command: "SnipePokemon",
+             Data: pokemonId,
+             PokemonId: pokemonId ,
+             Id:pokemonId
+        };
+        _.each(this.config.eventHandlers, eh => eh.onSendHumanSnipePokemonRequest(request));
+        this.sendRequest(request);
     }
 
     private parseItemString = (itemStr: string): IFortItem[] => {
